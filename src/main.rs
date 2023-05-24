@@ -11,17 +11,17 @@ struct Config {
 impl Config {
     fn build(args: Vec<String>) -> Result<Self, Box<dyn Error>> {
         let branch_name = Config::get_positional_arg(&args, 0)?;
-        return Ok(Self { branch_name });
+        Ok(Self { branch_name })
     }
 
-    fn get_positional_arg(args: &Vec<String>, index: usize) -> Result<String, Box<dyn Error>> {
+    fn get_positional_arg(args: &[String], index: usize) -> Result<String, Box<dyn Error>> {
         let position = index + 1;
         let arg = args
             .get(index)
             .ok_or(format!("expected argument at position {position}"))?
             .to_owned();
 
-        return Ok(arg);
+        Ok(arg)
     }
 }
 
@@ -29,7 +29,7 @@ fn get_repo() -> Result<Repository, git2::Error> {
     let path = "/tmp/dummy_repo";
     let repo = Repository::init(path)?;
     let file_path = path.to_owned() + "/dummy.txt";
-    fs::write(&file_path, "mock").unwrap();
+    fs::write(file_path, "mock").unwrap();
     let mut index = repo.index()?;
     index.add_path(Path::new("dummy.txt"))?;
     // index.write()?;
