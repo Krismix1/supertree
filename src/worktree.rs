@@ -1,8 +1,15 @@
-use self::fs::CopyTargets;
+use self::{commands::Commands, fs::CopyTargets};
 use git2::{BranchType, Reference, Repository, WorktreeAddOptions};
+use std::process::Command;
 use std::{error::Error, path::PathBuf};
 
 mod fs;
+
+mod commands {
+    pub enum Commands {
+        Shell(String),
+    }
+}
 
 const MASTER_BRANCH: &str = "master";
 
@@ -32,7 +39,6 @@ fn new_worktree(repo: &Repository, branch_name: &str) -> Result<PathBuf, Box<dyn
     let new_branch = repo.branch(branch_name, &ref_branch.get().peel_to_commit()?, false)?;
     worktree_add_options.reference(Some(new_branch.get()));
 
-    // let mut path = env::current_dir()?;
     let repo_root = get_root_path(repo)?;
     let worktree_path = repo_root.join(branch_name); // TODO: Perhaps split by '/' and then join parts to path
 
@@ -69,11 +75,26 @@ fn prepare_worktree(repo: &Repository, target_dir: PathBuf) -> Result<(), Box<dy
     ];
     fs::copy_files(&source_dir, &target_dir, &targets)?;
 
+    let commands = [Commands::Shell("npm run prepare".to_string())];
+
+    let target_dir = target_dir.canonicalize()?;
+    for command in commands {
+        match command {
+            Commands::Shell(cmd) => {
+                println!("Running command `{cmd}`");
+                Command::new("bash")
+                    .arg("-c")
+                    .arg(cmd)
+                    .current_dir(&target_dir)
+                    .output()?;
+            }
+        }
+    }
+
     Ok(())
 }
 
 fn get_root_path(repo: &Repository) -> Result<PathBuf, Box<dyn Error>> {
-    // let path = env::current_dir()?;
     let repo_root = repo.path().parent().map(|f| f.to_path_buf());
 
     repo_root.ok_or("Failed to get root path".into())
