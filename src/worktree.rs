@@ -63,6 +63,9 @@ fn prepare_worktree(repo: &Repository, target_dir: PathBuf) -> Result<(), Box<dy
     let targets = [
         CopyTarget::new("**REMOVED**".to_string(), true),
         CopyTarget::new("**REMOVED**".to_string(), true),
+        CopyTarget::new("**REMOVED**".to_string(), true),
+        CopyTarget::new("**REMOVED**".to_string(), true),
+        CopyTarget::new("**REMOVED**".to_string(), true),
     ];
     fs::copy_files(&source_dir, &target_dir, &targets)?;
 
