@@ -1,4 +1,4 @@
-use std::error::Error;
+use color_eyre::eyre::Result;
 use std::fs;
 use std::os::unix::fs as unix_fs;
 use std::path::Path;
@@ -19,11 +19,7 @@ impl CopyTargets {
     }
 }
 
-pub fn copy_files(
-    source_dir: &Path,
-    target_dir: &Path,
-    targets: &[CopyTargets],
-) -> Result<(), Box<dyn Error>> {
+pub fn copy_files(source_dir: &Path, target_dir: &Path, targets: &[CopyTargets]) -> Result<()> {
     for target in targets {
         let source_entry = source_dir.join(target.path.clone());
         let target_entry = target_dir.join(target.path.clone());

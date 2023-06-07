@@ -1,7 +1,9 @@
 use self::{commands::Commands, fs::CopyTargets};
+use color_eyre::eyre::{Context, Result};
+use color_eyre::Report;
 use git2::{BranchType, Reference, Repository, WorktreeAddOptions};
+use std::path::PathBuf;
 use std::process::Command;
-use std::{error::Error, path::PathBuf};
 
 mod fs;
 
@@ -13,30 +15,34 @@ mod commands {
 
 const MASTER_BRANCH: &str = "master";
 
-pub fn get_repo() -> Result<Repository, Box<dyn Error>> {
+pub fn get_repo() -> Result<Repository> {
     let path = std::env::current_dir()?;
     let repo = Repository::init(path)?;
 
     Ok(repo)
 }
 
-pub fn create_worktree(repo: &Repository, branch_name: &str) -> Result<(), Box<dyn Error>> {
+pub fn create_worktree(repo: &Repository, branch_name: &str) -> Result<()> {
     let target_dir = new_worktree(repo, branch_name)?;
     prepare_worktree(repo, target_dir)?;
 
     Ok(())
 }
 
-fn new_worktree(repo: &Repository, branch_name: &str) -> Result<PathBuf, Box<dyn Error>> {
+fn new_worktree(repo: &Repository, branch_name: &str) -> Result<PathBuf> {
     if !Reference::is_valid_name(branch_name) {
-        return Err(format!("Branch name '{branch_name}' is not valid").into());
+        return Result::Err(Report::msg(format!(
+            "Branch name '{branch_name}' is not valid"
+        )));
     }
 
     let mut worktree_add_options = WorktreeAddOptions::new();
 
     // TODO: Maybe support picking a different source ref
     let ref_branch = repo.find_branch(MASTER_BRANCH, BranchType::Local)?;
-    let new_branch = repo.branch(branch_name, &ref_branch.get().peel_to_commit()?, false)?;
+    let new_branch = repo
+        .branch(branch_name, &ref_branch.get().peel_to_commit()?, false)
+        .wrap_err("Failed to create new branch")?;
     worktree_add_options.reference(Some(new_branch.get()));
 
     let repo_root = get_root_path(repo)?;
@@ -56,7 +62,7 @@ fn new_worktree(repo: &Repository, branch_name: &str) -> Result<PathBuf, Box<dyn
     Ok(worktree_path)
 }
 
-fn prepare_worktree(repo: &Repository, target_dir: PathBuf) -> Result<(), Box<dyn Error>> {
+fn prepare_worktree(repo: &Repository, target_dir: PathBuf) -> Result<()> {
     let repo_root = get_root_path(repo)?;
 
     let source_dir = repo_root.join(MASTER_BRANCH);
@@ -94,8 +100,8 @@ fn prepare_worktree(repo: &Repository, target_dir: PathBuf) -> Result<(), Box<dy
     Ok(())
 }
 
-fn get_root_path(repo: &Repository) -> Result<PathBuf, Box<dyn Error>> {
+fn get_root_path(repo: &Repository) -> Result<PathBuf> {
     let repo_root = repo.path().parent().map(|f| f.to_path_buf());
 
-    repo_root.ok_or("Failed to get root path".into())
+    repo_root.ok_or(Report::msg("Failed to get root path"))
 }
