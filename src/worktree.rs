@@ -1,45 +1,48 @@
-use self::{commands::Commands, fs::CopyTargets};
 use color_eyre::eyre::{Context, Result};
 use color_eyre::Report;
 use git2::{BranchType, Reference, Repository, WorktreeAddOptions};
 use std::path::PathBuf;
-use std::process::Command;
 
-mod fs;
+use crate::tasks::{files, shell};
+use crate::tasks::{ProjectConfig, Task};
 
-mod commands {
-    pub enum Commands {
-        Shell(String),
-    }
-}
-
-const MASTER_BRANCH: &str = "master";
-
-pub fn get_repo() -> Result<Repository> {
+pub fn get_repo_curr_dir() -> Result<Repository> {
     let path = std::env::current_dir()?;
     let repo = Repository::init(path)?;
 
     Ok(repo)
 }
 
-pub fn create_worktree(repo: &Repository, branch_name: &str) -> Result<()> {
-    let target_dir = new_worktree(repo, branch_name)?;
-    prepare_worktree(repo, target_dir)?;
+pub fn create_worktree(
+    repo: &Repository,
+    branch_name: &str,
+    project_config: &ProjectConfig,
+) -> Result<()> {
+    let target_dir = new_worktree(repo, branch_name, &project_config.primary_branch)?;
+    prepare_worktree(repo, target_dir, project_config)?;
 
     Ok(())
 }
 
-fn new_worktree(repo: &Repository, branch_name: &str) -> Result<PathBuf> {
+fn new_worktree(repo: &Repository, branch_name: &str, source_ref_branch: &str) -> Result<PathBuf> {
     if !Reference::is_valid_name(branch_name) {
         return Result::Err(Report::msg(format!(
             "Branch name '{branch_name}' is not valid"
         )));
     }
+    if !Reference::is_valid_name(source_ref_branch) {
+        return Result::Err(Report::msg(format!(
+            "Branch name '{source_ref_branch}' is not valid"
+        )));
+    }
 
     let mut worktree_add_options = WorktreeAddOptions::new();
 
-    // TODO: Maybe support picking a different source ref
-    let ref_branch = repo.find_branch(MASTER_BRANCH, BranchType::Local)?;
+    // TODO: Support picking a remote source ref
+    let ref_branch = repo
+        .find_branch(source_ref_branch, BranchType::Local)
+        .context(format!("Local ref branch {source_ref_branch} not found"))?;
+
     let new_branch = repo
         .branch(branch_name, &ref_branch.get().peel_to_commit()?, false)
         .wrap_err("Failed to create new branch")?;
@@ -48,7 +51,7 @@ fn new_worktree(repo: &Repository, branch_name: &str) -> Result<PathBuf> {
     let repo_root = get_root_path(repo)?;
     let worktree_path = repo_root.join(branch_name); // TODO: Perhaps split by '/' and then join parts to path
 
-    // worktree name is used to create folder .git/worktrees/<name>
+    // worktree name is used to create directory .git/worktrees/<name>
     let worktree_name = branch_name.replace(std::path::MAIN_SEPARATOR, "_");
 
     let worktree = repo.worktree(
@@ -62,38 +65,21 @@ fn new_worktree(repo: &Repository, branch_name: &str) -> Result<PathBuf> {
     Ok(worktree_path)
 }
 
-fn prepare_worktree(repo: &Repository, target_dir: PathBuf) -> Result<()> {
+fn prepare_worktree(repo: &Repository, target_dir: PathBuf, config: &ProjectConfig) -> Result<()> {
     let repo_root = get_root_path(repo)?;
 
-    let source_dir = repo_root.join(MASTER_BRANCH);
+    let source_dir = repo_root.join(&config.primary_branch);
     let source_dir = if source_dir.exists() {
         source_dir
     } else {
         repo_root
     };
 
-    let targets = [
-        CopyTarget::new("**REMOVED**".to_string(), true),
-        CopyTarget::new("**REMOVED**".to_string(), true),
-        CopyTarget::new("**REMOVED**".to_string(), true),
-        CopyTarget::new("**REMOVED**".to_string(), true),
-        CopyTarget::new("**REMOVED**".to_string(), true),
-    ];
-    fs::copy_files(&source_dir, &target_dir, &targets)?;
-
-    let commands = [Commands::Shell("npm run prepare".to_string())];
-
     let target_dir = target_dir.canonicalize()?;
-    for command in commands {
-        match command {
-            Commands::Shell(cmd) => {
-                println!("Running command `{cmd}`");
-                Command::new("bash")
-                    .arg("-c")
-                    .arg(cmd)
-                    .current_dir(&target_dir)
-                    .output()?;
-            }
+    for task in &config.tasks {
+        match task {
+            Task::Shell(config) => shell::run_shell(config, &target_dir)?,
+            Task::CopyPath(config) => files::copy_path(config, &source_dir, &target_dir)?,
         }
     }
 

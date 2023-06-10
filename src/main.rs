@@ -6,20 +6,22 @@ mod cli;
 mod tasks;
 mod worktree;
 
-fn helper(config: &CliConfig) -> Result<()> {
-    let repo = worktree::get_repo()?;
-    worktree::create_worktree(&repo, &config.branch_name)?;
-
-    Ok(())
-}
-
 fn main() -> Result<()> {
     color_eyre::install()?;
-    let config = CliConfig::parse();
 
-    helper(&config)?;
-    let config = tasks::load_from_config_file();
-    println!("{config:?}");
+    let cli_config = CliConfig::parse();
+    let projects_config = tasks::load_from_config_file()?;
+
+    let directory = std::env::current_dir()?;
+    let current_dir_name = directory.file_name().unwrap().to_str().unwrap();
+
+    let project_config = projects_config
+        .project_configs
+        .get(current_dir_name)
+        .unwrap_or(&projects_config.default_config);
+
+    let repo = worktree::get_repo_curr_dir()?;
+    worktree::create_worktree(&repo, &cli_config.branch_name, project_config)?;
 
     Ok(())
 }

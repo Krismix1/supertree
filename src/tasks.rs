@@ -9,21 +9,42 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use self::{files::CopyPathConfig, shell::ShellConfig};
+
+pub mod files;
+pub mod shell;
+
+#[derive(Serialize, Deserialize, Debug)]
+// https://serde.rs/enum-representations.html#internally-tagged
+#[serde(tag = "type")]
+pub enum Task {
+    CopyPath(CopyPathConfig),
+    Shell(ShellConfig),
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct ProjectConfig {
+    #[serde(default = "default_branch")]
     pub primary_branch: String,
+    #[serde(default)]
+    pub tasks: Vec<Task>,
+}
+
+fn default_branch() -> String {
+    "master".to_string()
 }
 
 impl Default for ProjectConfig {
     fn default() -> Self {
         Self {
-            primary_branch: "master".to_owned(),
+            primary_branch: default_branch(),
+            tasks: Default::default(),
         }
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct RootConfig {
     #[serde(default, rename = "default")]
@@ -32,18 +53,23 @@ pub struct RootConfig {
     #[serde(rename = "projects")]
     pub project_configs: BTreeMap<String, ProjectConfig>,
 
-    #[serde(default = "default_version")]
     version: String,
 }
 
-fn default_version() -> String {
-    "1".to_string()
+impl Default for RootConfig {
+    fn default() -> Self {
+        Self {
+            default_config: Default::default(),
+            project_configs: Default::default(),
+            version: "1".to_string(),
+        }
+    }
 }
 
 fn store_config(config: &RootConfig, path: &Path) -> color_eyre::Result<()> {
     fs::create_dir_all(
         path.parent()
-            .context("Failed to extract path to config folder")?,
+            .context("Failed to extract path to config directory")?,
     )?;
 
     let fp = File::create(path).context("Failed to open config file")?;
@@ -55,7 +81,7 @@ fn store_config(config: &RootConfig, path: &Path) -> color_eyre::Result<()> {
 
 pub fn load_from_config_file() -> color_eyre::Result<RootConfig> {
     let config_path: PathBuf = ProjectDirs::from("", "", env!("CARGO_PKG_NAME"))
-        .context("Failed to identify path to user config folder")?
+        .context("Failed to identify path to user config directory")?
         .config_dir()
         .join("config.yaml");
 
