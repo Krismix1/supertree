@@ -9,6 +9,8 @@ pub struct CopyPathConfig {
     pub source: PathBuf,
     #[serde(default)]
     pub symlink: bool,
+    #[serde(default)]
+    pub missing_okay: bool,
 }
 
 pub fn copy_path(
@@ -24,6 +26,11 @@ pub fn copy_path(
         source_entry.display(),
         target_entry.display(),
     );
+
+    if copy_config.missing_okay && !source_entry.exists() {
+        println!("Skipping {} as it is missing", source_entry.display());
+        return Ok(());
+    }
 
     if copy_config.symlink {
         unix_fs::symlink(&source_entry, &target_entry).context(format!(
