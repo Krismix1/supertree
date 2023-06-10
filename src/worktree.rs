@@ -1,6 +1,7 @@
 use color_eyre::eyre::{Context, Result};
 use color_eyre::Report;
-use git2::{BranchType, Reference, Repository, WorktreeAddOptions};
+use git2::{BranchType, Repository, WorktreeAddOptions};
+use std::fs;
 use std::path::PathBuf;
 
 use crate::tasks::{files, shell};
@@ -25,17 +26,6 @@ pub fn create_worktree(
 }
 
 fn new_worktree(repo: &Repository, branch_name: &str, source_ref_branch: &str) -> Result<PathBuf> {
-    if !Reference::is_valid_name(branch_name) {
-        return Result::Err(Report::msg(format!(
-            "Branch name '{branch_name}' is not valid"
-        )));
-    }
-    if !Reference::is_valid_name(source_ref_branch) {
-        return Result::Err(Report::msg(format!(
-            "Branch name '{source_ref_branch}' is not valid"
-        )));
-    }
-
     let mut worktree_add_options = WorktreeAddOptions::new();
 
     // TODO: Support picking a remote source ref
@@ -46,10 +36,19 @@ fn new_worktree(repo: &Repository, branch_name: &str, source_ref_branch: &str) -
     let new_branch = repo
         .branch(branch_name, &ref_branch.get().peel_to_commit()?, false)
         .wrap_err("Failed to create new branch")?;
+
     worktree_add_options.reference(Some(new_branch.get()));
 
     let repo_root = get_root_path(repo)?;
     let worktree_path = repo_root.join(branch_name); // TODO: Perhaps split by '/' and then join parts to path
+
+    let parent_dir = worktree_path
+        .parent()
+        .expect("expected to extract parent dir");
+    fs::create_dir_all(&parent_dir).context(format!(
+        "Failed to create directory {}",
+        parent_dir.display()
+    ))?;
 
     // worktree name is used to create directory .git/worktrees/<name>
     let worktree_name = branch_name.replace(std::path::MAIN_SEPARATOR, "_");
@@ -72,6 +71,11 @@ fn prepare_worktree(repo: &Repository, target_dir: PathBuf, config: &ProjectConf
     let source_dir = if source_dir.exists() {
         source_dir
     } else {
+        println!(
+            "{} not found, using repo root {}",
+            source_dir.display(),
+            repo_root.display()
+        );
         repo_root
     };
 
