@@ -45,7 +45,8 @@ fn new_worktree(repo: &Repository, branch_name: &str, source_ref_branch: &str) -
     let parent_dir = worktree_path
         .parent()
         .expect("expected to extract parent dir");
-    fs::create_dir_all(&parent_dir).context(format!(
+
+    fs::create_dir_all(parent_dir).context(format!(
         "Failed to create directory {}",
         parent_dir.display()
     ))?;
