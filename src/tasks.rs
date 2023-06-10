@@ -1,15 +1,13 @@
+use color_eyre::eyre::{Context, ContextCompat};
 use directories::ProjectDirs;
+use serde::{Deserialize, Serialize};
 use std::{
     collections::BTreeMap,
     env,
     fs::{self, File},
-    io::{BufReader, BufWriter},
+    io::{BufReader, BufWriter, ErrorKind::NotFound},
     path::{Path, PathBuf},
 };
-
-use std::io::ErrorKind::NotFound;
-
-use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
@@ -33,35 +31,48 @@ pub struct RootConfig {
 
     #[serde(rename = "projects")]
     pub project_configs: BTreeMap<String, ProjectConfig>,
+
+    #[serde(default = "default_version")]
+    version: String,
 }
 
-fn store_config(config: &RootConfig, path: &Path) {
-    fs::create_dir_all(path.parent().unwrap()).unwrap();
+fn default_version() -> String {
+    "1".to_string()
+}
 
-    let fp = File::create(path).unwrap();
+fn store_config(config: &RootConfig, path: &Path) -> color_eyre::Result<()> {
+    fs::create_dir_all(
+        path.parent()
+            .context("Failed to extract path to config folder")?,
+    )?;
+
+    let fp = File::create(path).context("Failed to open config file")?;
     let writer = BufWriter::new(fp);
-    serde_yaml::to_writer(writer, config).unwrap();
+    serde_yaml::to_writer(writer, config).context("Failed to save config file")?;
+
+    Ok(())
 }
 
-pub fn load_from_config_file() -> RootConfig {
+pub fn load_from_config_file() -> color_eyre::Result<RootConfig> {
     let config_path: PathBuf = ProjectDirs::from("", "", env!("CARGO_PKG_NAME"))
-        .unwrap()
+        .context("Failed to identify path to user config folder")?
         .config_dir()
         .join("config.yaml");
 
     let fp = match File::open(config_path.clone()) {
-        Ok(fp) => Ok(fp),
         Err(ref e) if e.kind() == NotFound => {
             let config = Default::default();
-            store_config(&config, &config_path);
-            return config;
+            store_config(&config, &config_path).context("Failed to save default config")?;
+
+            return Ok(config);
         }
-        e => e,
+        v => v,
     }
-    .expect("failed to read config file");
+    .context("Failed to read config file")?;
 
     let reader = BufReader::new(fp);
-    let config: Result<RootConfig, serde_yaml::Error> = serde_yaml::from_reader(reader);
+    let config: RootConfig =
+        serde_yaml::from_reader(reader).context("Failed to parse config file")?;
 
-    config.expect("failed to parse config file")
+    Ok(config)
 }
