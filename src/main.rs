@@ -3,6 +3,7 @@ use cli::CliConfig;
 use color_eyre::eyre::Result;
 
 mod cli;
+mod tasks;
 mod worktree;
 
 fn helper(config: &CliConfig) -> Result<()> {
@@ -17,6 +18,8 @@ fn main() -> Result<()> {
     let config = CliConfig::parse();
 
     helper(&config)?;
+    let config = tasks::load_from_config_file();
+    println!("{config:?}");
 
     Ok(())
 }
