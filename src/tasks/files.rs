@@ -13,37 +13,79 @@ pub struct CopyPathConfig {
     pub missing_okay: bool,
 }
 
+fn symlink(src: &Path, tgt: &Path) -> color_eyre::Result<()> {
+    println!("Symlinking {} to {}", src.display(), tgt.display());
+
+    unix_fs::symlink(src, tgt).context(format!(
+        "failed to symlink {} to {}",
+        src.display(),
+        tgt.display(),
+    ))?;
+
+    Ok(())
+}
+
+fn copy_file(src: &Path, tgt: &Path, verbose: bool) -> color_eyre::Result<()> {
+    if verbose {
+        println!("Copying {} to {}", src.display(), tgt.display());
+    }
+
+    fs::copy(src, tgt).context(format!(
+        "failed to copy {} to {}",
+        src.display(),
+        tgt.display(),
+    ))?;
+
+    Ok(())
+}
+
+fn copy_dir(src: &Path, tgt: &Path, verbose: bool) -> color_eyre::Result<()> {
+    if verbose {
+        println!("Copying {} to {}", src.display(), tgt.display());
+    }
+
+    fs::create_dir_all(tgt)?;
+
+    let file_iter = src
+        .read_dir()
+        .context(format!(
+            "Failed to list files in directory {}",
+            src.display()
+        ))?
+        .flatten();
+
+    for entry in file_iter {
+        let entry = entry.path();
+        let target_entry = tgt.join(entry.strip_prefix(src)?);
+        if !entry.is_dir() {
+            copy_file(&entry, &target_entry, false)?;
+        } else {
+            copy_dir(&entry, &target_entry, false)?;
+        }
+    }
+
+    Ok(())
+}
+
 pub fn copy_path(
     copy_config: &CopyPathConfig,
     source_dir: &Path,
     target_dir: &Path,
 ) -> color_eyre::Result<()> {
     let source_entry = source_dir.join(&copy_config.source);
-    let target_entry = target_dir.join(&copy_config.source);
-
-    println!(
-        "Copying {} to {}",
-        source_entry.display(),
-        target_entry.display(),
-    );
-
     if copy_config.missing_okay && !source_entry.exists() {
         println!("Skipping {} as it is missing", source_entry.display());
         return Ok(());
     }
 
+    let target_entry = target_dir.join(&copy_config.source);
+
     if copy_config.symlink {
-        unix_fs::symlink(&source_entry, &target_entry).context(format!(
-            "failed to symlink {} to {}",
-            source_entry.display(),
-            target_entry.display(),
-        ))?;
+        symlink(&source_entry, &target_entry)?;
+    } else if source_entry.is_dir() {
+        copy_dir(&source_entry, &target_entry, true)?;
     } else {
-        fs::copy(&source_entry, &target_entry).context(format!(
-            "failed to copy {} to {}",
-            source_entry.display(),
-            target_entry.display(),
-        ))?;
+        copy_file(&source_entry, &target_entry, true)?;
     }
 
     Ok(())
