@@ -63,3 +63,9 @@ pub struct CliConfig {
     #[command(flatten)]
     more_args: CliArgs,
 }
+
+impl CliConfig {
+    pub fn remote_branch(&self) -> Option<&str> {
+        self.more_args.remote_branch.as_deref()
+    }
+}

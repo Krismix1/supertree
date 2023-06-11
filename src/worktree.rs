@@ -1,6 +1,6 @@
 use color_eyre::eyre::{Context, Result};
 use color_eyre::Report;
-use git2::{BranchType, Repository, WorktreeAddOptions};
+use git2::{Branch, BranchType, Repository, WorktreeAddOptions};
 use std::fs;
 use std::path::PathBuf;
 
@@ -17,26 +17,44 @@ pub fn get_repo_curr_dir() -> Result<Repository> {
 pub fn create_worktree(
     repo: &Repository,
     branch_name: &str,
+    remote_branch: Option<&str>,
     project_config: &ProjectConfig,
 ) -> Result<()> {
-    let target_dir = new_worktree(repo, branch_name, &project_config.primary_branch)?;
+    let (branch_type, ref_branch) = remote_branch
+        .map(|rb| if rb.is_empty() { branch_name } else { rb })
+        .map_or_else(
+            || (BranchType::Local, project_config.primary_branch.clone()),
+            |br| {
+                (
+                    BranchType::Remote,
+                    format!("{}/{br}", project_config.primary_remote),
+                )
+            },
+        );
+
+    let ref_branch = repo.find_branch(&ref_branch, branch_type).context(format!(
+        "{:?} ref branch {} not found",
+        branch_type, branch_name
+    ))?;
+
+    println!(
+        "Using {:?} ref branch {} for checkout",
+        branch_type,
+        ref_branch.name().unwrap().unwrap()
+    );
+
+    let target_dir = new_worktree(repo, branch_name, &ref_branch)?;
     prepare_worktree(repo, target_dir, project_config)?;
 
     Ok(())
 }
 
-fn new_worktree(repo: &Repository, branch_name: &str, source_ref_branch: &str) -> Result<PathBuf> {
-    let mut worktree_add_options = WorktreeAddOptions::new();
-
-    // TODO: Support picking a remote source ref
-    let ref_branch = repo
-        .find_branch(source_ref_branch, BranchType::Local)
-        .context(format!("Local ref branch {source_ref_branch} not found"))?;
-
+fn new_worktree(repo: &Repository, branch_name: &str, ref_branch: &Branch) -> Result<PathBuf> {
     let new_branch = repo
         .branch(branch_name, &ref_branch.get().peel_to_commit()?, false)
         .wrap_err("Failed to create new branch")?;
 
+    let mut worktree_add_options = WorktreeAddOptions::new();
     worktree_add_options.reference(Some(new_branch.get()));
 
     let repo_root = get_root_path(repo)?;

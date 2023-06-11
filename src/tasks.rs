@@ -27,6 +27,10 @@ pub enum Task {
 pub struct ProjectConfig {
     #[serde(default = "default_branch")]
     pub primary_branch: String,
+
+    #[serde(default = "default_remote")]
+    pub primary_remote: String,
+
     #[serde(default)]
     pub tasks: Vec<Task>,
 }
@@ -35,10 +39,15 @@ fn default_branch() -> String {
     "master".to_string()
 }
 
+fn default_remote() -> String {
+    "origin".to_string()
+}
+
 impl Default for ProjectConfig {
     fn default() -> Self {
         Self {
             primary_branch: default_branch(),
+            primary_remote: default_remote(),
             tasks: Default::default(),
         }
     }
