@@ -9,7 +9,7 @@ use crate::tasks::{ProjectConfig, Task};
 
 pub fn get_repo_curr_dir() -> Result<Repository> {
     let path = std::env::current_dir()?;
-    let repo = Repository::init(path)?;
+    let repo = Repository::open(path)?;
 
     Ok(repo)
 }
