@@ -58,6 +58,10 @@ pub struct CliConfig {
     /// the name of the branch to create
     pub branch_name: String,
 
+    /// skip running tasks
+    #[arg(short, long, default_value_t = false)]
+    pub skip_tasks: bool,
+
     // https://docs.rs/clap/latest/clap/_derive/index.html#flattening-hand-implemented-args-into-a-derived-application
     // default_missing_value is only supported via the Arg struct
     #[command(flatten)]

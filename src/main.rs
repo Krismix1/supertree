@@ -21,12 +21,7 @@ fn main() -> Result<()> {
         .unwrap_or(&projects_config.default_config);
 
     let repo = worktree::get_repo_curr_dir()?;
-    worktree::create_worktree(
-        &repo,
-        &cli_config.branch_name,
-        cli_config.remote_branch(),
-        project_config,
-    )?;
+    worktree::create_worktree(&repo, &cli_config, project_config)?;
 
     Ok(())
 }
