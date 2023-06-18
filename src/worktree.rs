@@ -50,7 +50,7 @@ pub fn create_worktree(
         repo,
         branch_name,
         &ref_branch,
-        &project_config.primary_remote,
+        remote_branch.map(|_| project_config.primary_remote.as_str()),
     )?;
 
     if !cli_config.skip_tasks {
@@ -64,15 +64,18 @@ fn new_worktree(
     repo: &Repository,
     branch_name: &str,
     ref_branch: &Branch,
-    remote: &str,
+    remote: Option<&str>,
 ) -> Result<PathBuf> {
     let mut new_branch = repo
         .branch(branch_name, &ref_branch.get().peel_to_commit()?, false)
         .wrap_err("Failed to create new branch")?;
 
-    new_branch
-        .set_upstream(Some(remote))
-        .context("Failed to set upstream for branch")?;
+    if remote.is_some() {
+        new_branch
+            // passing None unsets the remote...
+            .set_upstream(remote)
+            .context("Failed to set upstream for branch")?;
+    }
 
     let mut worktree_add_options = WorktreeAddOptions::new();
     worktree_add_options.reference(Some(new_branch.get()));
