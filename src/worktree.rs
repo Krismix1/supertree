@@ -4,7 +4,7 @@ use git2::{Branch, BranchType, Repository, WorktreeAddOptions};
 use std::fs;
 use std::path::PathBuf;
 
-use crate::cli::CliConfig;
+use crate::cli::NewWorktreeArgs;
 use crate::tasks::{files, shell};
 use crate::tasks::{ProjectConfig, Task};
 
@@ -17,11 +17,11 @@ pub fn get_repo_curr_dir() -> Result<Repository> {
 
 pub fn create_worktree(
     repo: &Repository,
-    cli_config: &CliConfig,
+    new_worktree_args: &NewWorktreeArgs,
     project_config: &ProjectConfig,
 ) -> Result<()> {
-    let branch_name = &cli_config.branch_name;
-    let remote_branch: Option<&str> = cli_config.remote_branch();
+    let branch_name = &new_worktree_args.branch_name;
+    let remote_branch: Option<&str> = new_worktree_args.remote_branch();
 
     let (branch_type, ref_branch) = remote_branch
         .map(|rb| if rb.is_empty() { branch_name } else { rb })
@@ -53,7 +53,7 @@ pub fn create_worktree(
         remote_branch.map(|_| project_config.primary_remote.as_str()),
     )?;
 
-    if !cli_config.skip_tasks {
+    if !new_worktree_args.skip_tasks {
         prepare_worktree(repo, target_dir, project_config)?;
     }
 

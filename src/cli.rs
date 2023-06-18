@@ -1,4 +1,6 @@
-use clap::{command, error::Error, Arg, ArgMatches, Args, Command, FromArgMatches, Parser};
+use clap::{
+    command, error::Error, Arg, ArgMatches, Args, Command, FromArgMatches, Parser, Subcommand,
+};
 
 #[derive(Debug)]
 struct CliArgs {
@@ -54,7 +56,7 @@ impl Args for CliArgs {
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
-pub struct CliConfig {
+pub struct NewWorktreeArgs {
     /// the name of the branch to create
     pub branch_name: String,
 
@@ -68,8 +70,27 @@ pub struct CliConfig {
     more_args: CliArgs,
 }
 
-impl CliConfig {
+impl NewWorktreeArgs {
     pub fn remote_branch(&self) -> Option<&str> {
         self.more_args.remote_branch.as_deref()
     }
+}
+
+/// A CLI to improve the DX around git worktree
+#[derive(Debug, Parser)]
+#[command(name = "supertree")]
+#[command(author, version, about, long_about = None)]
+pub struct SupertreeCli {
+    #[command(subcommand)]
+    pub command: Commands,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum Commands {
+    /// Create new work tree. Creates default config if missing
+    #[command(arg_required_else_help = true)]
+    New(NewWorktreeArgs),
+
+    /// Only generate default config (if missing) and exit
+    Config,
 }
