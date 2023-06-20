@@ -133,3 +133,4 @@ A list of resources that I used or could use for the future changes.
 - https://docs.rs/confy/0.3.1/confy/index.html
 - https://rust-cli.github.io/book/tutorial/packaging.html
 - https://docs.rs/clap_complete/4.3.1/clap_complete/generator/fn.generate_to.html
+- https://github.com/BurntSushi/ripgrep/blob/31adff6f3c4bfefc9e77df40871f2989443e6827/ci/build_deb.sh#L34
