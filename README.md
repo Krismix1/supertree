@@ -10,6 +10,7 @@ The fix would be to use `git worktree add <name> -b <name>`, thus I would have t
 2. After creating a worktree, I found myself needing to copy or generate gitignored files such as env files, secret files and/or install dependencies and other tasks.
 
 <!--toc:start-->
+## Table of contents
 - [Supertree - Supercharging `git worktree`](#supertree-supercharging-git-worktree)
   - [Installation](#installation)
     - [From source](#from-source)
