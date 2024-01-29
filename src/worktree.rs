@@ -81,7 +81,8 @@ fn new_worktree(
     worktree_add_options.reference(Some(new_branch.get()));
 
     let repo_root = get_root_path(repo)?;
-    let worktree_path = repo_root.join(branch_name); // TODO: Perhaps split by '/' and then join parts to path
+    // convert "/" to OS specific path separator
+    let worktree_path = repo_root.join(branch_name.split('/').collect::<PathBuf>());
 
     let parent_dir = worktree_path
         .parent()

@@ -111,7 +111,6 @@ This command will be passed via `bash -c`, so you can use bash shenanigans if yo
 This is a work in progress tool, so it may be rough in some areas...
 
 - Figure out how to build and share the packaged version of the tool
-- Split branch name by '/' and join parts to a Path (i.e. generate platform dependant dir name)
 - Pre-commit hook
 - Polish logging
 - Polish errors handling
