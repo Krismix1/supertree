@@ -133,3 +133,15 @@ A list of resources that I used or could use for the future changes.
 - https://rust-cli.github.io/book/tutorial/packaging.html
 - https://docs.rs/clap_complete/4.3.1/clap_complete/generator/fn.generate_to.html
 - https://github.com/BurntSushi/ripgrep/blob/31adff6f3c4bfefc9e77df40871f2989443e6827/ci/build_deb.sh#L34
+
+
+### Debug libgit2
+Use the local libgit2 for debugging purposes.
+```bash
+cargo add git2 -F vendored-libgit2
+```
+Run the debugger (e.g. LLDB or GDB).
+Set breakpoints where appropriate, and check the source code for [libgit2](https://github.com/libgit2/libgit2/blob/v1.7.2/src/libgit2/worktree.c#L338).
+
+- https://blog.logrocket.com/debugging-rust-apps-with-gdb/
+- https://fasterthanli.me/articles/request-coalescing-in-async-rust
