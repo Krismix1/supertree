@@ -86,7 +86,12 @@ fn new_worktree(
     if remote.is_some() {
         new_branch
             // passing None unsets the remote...
-            .set_upstream(remote)
+            // but I want to keep it for existing branches
+            .set_upstream(
+                remote
+                    .map(|remote| format!("{}/{}", remote, branch_name))
+                    .as_deref(),
+            )
             .context("Failed to set upstream for branch")?;
     }
 
