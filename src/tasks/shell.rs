@@ -7,7 +7,7 @@ pub struct ShellConfig {
 }
 
 pub fn run_shell(config: &ShellConfig, work_dir: &Path) -> Result<(), std::io::Error> {
-    println!("Running command `{}`", config.cmd);
+    eprintln!("Running command `{}`", config.cmd);
 
     Command::new("bash")
         .arg("-c")

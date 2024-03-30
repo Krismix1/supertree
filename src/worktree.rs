@@ -39,7 +39,7 @@ pub fn create_worktree(
         branch_type, branch_name
     ))?;
 
-    println!(
+    eprintln!(
         "Using {:?} ref branch {} for checkout",
         branch_type,
         ref_branch.name().unwrap().unwrap()
@@ -68,6 +68,7 @@ fn new_worktree(
     let repo_root = get_root_path(repo)?;
     // convert "/" to OS specific path separator
     let worktree_path = repo_root.join(branch_name.split('/').collect::<PathBuf>());
+    eprintln!("Creating worktree at {}", worktree_path.display());
 
     // must create parent directory for nested folders
     let parent_dir = worktree_path
@@ -115,7 +116,7 @@ fn prepare_worktree(repo: &Repository, target_dir: PathBuf, config: &ProjectConf
     let source_dir = if source_dir.exists() {
         source_dir
     } else {
-        println!(
+        eprintln!(
             "{} not found, using repo root {}",
             source_dir.display(),
             repo_root.display()

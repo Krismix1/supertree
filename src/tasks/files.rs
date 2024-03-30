@@ -14,7 +14,7 @@ pub struct CopyPathConfig {
 }
 
 fn symlink(src: &Path, tgt: &Path) -> color_eyre::Result<()> {
-    println!("Symlinking {} to {}", src.display(), tgt.display());
+    eprintln!("Symlinking {} to {}", src.display(), tgt.display());
 
     unix_fs::symlink(src, tgt).context(format!(
         "failed to symlink {} to {}",
@@ -27,7 +27,7 @@ fn symlink(src: &Path, tgt: &Path) -> color_eyre::Result<()> {
 
 fn copy_file(src: &Path, tgt: &Path, verbose: bool) -> color_eyre::Result<()> {
     if verbose {
-        println!("Copying {} to {}", src.display(), tgt.display());
+        eprintln!("Copying {} to {}", src.display(), tgt.display());
     }
 
     fs::copy(src, tgt).context(format!(
@@ -41,7 +41,7 @@ fn copy_file(src: &Path, tgt: &Path, verbose: bool) -> color_eyre::Result<()> {
 
 fn copy_dir(src: &Path, tgt: &Path, verbose: bool) -> color_eyre::Result<()> {
     if verbose {
-        println!("Copying {} to {}", src.display(), tgt.display());
+        eprintln!("Copying {} to {}", src.display(), tgt.display());
     }
 
     fs::create_dir_all(tgt)?;
@@ -74,7 +74,7 @@ pub fn copy_path(
 ) -> color_eyre::Result<()> {
     let source_entry = source_dir.join(&copy_config.source);
     if copy_config.missing_okay && !source_entry.exists() {
-        println!("Skipping {} as it is missing", source_entry.display());
+        eprintln!("Skipping {} as it is missing", source_entry.display());
         return Ok(());
     }
 
