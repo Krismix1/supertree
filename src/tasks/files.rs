@@ -16,6 +16,8 @@ pub struct CopyPathConfig {
 fn symlink(src: &Path, tgt: &Path) -> color_eyre::Result<()> {
     eprintln!("Symlinking {} to {}", src.display(), tgt.display());
 
+    // TODO: Support softlink on Windows?
+    // https://doc.rust-lang.org/std/os/windows/fs/fn.symlink_file.html
     unix_fs::symlink(src, tgt).context(format!(
         "failed to symlink {} to {}",
         src.display(),
