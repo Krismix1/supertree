@@ -1,4 +1,4 @@
-use color_eyre::eyre::Context;
+use color_eyre::eyre::{eyre, Context};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::os::unix::fs as unix_fs;
@@ -74,7 +74,15 @@ pub fn copy_path(
     source_dir: &Path,
     target_dir: &Path,
 ) -> color_eyre::Result<()> {
+    if copy_config.source.is_absolute() {
+        return Err(eyre!(
+            "Source path must be relative to the source directory: {}",
+            copy_config.source.display()
+        ));
+    }
+
     let source_entry = source_dir.join(&copy_config.source);
+
     if copy_config.missing_okay && !source_entry.exists() {
         eprintln!("Skipping {} as it is missing", source_entry.display());
         return Ok(());

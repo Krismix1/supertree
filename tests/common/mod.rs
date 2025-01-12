@@ -71,4 +71,8 @@ impl TestRepo {
 
         Ok(())
     }
+
+    pub fn create_gitignore(&self, content: &str) -> color_eyre::Result<()> {
+        self.create_test_file(".gitignore", content)
+    }
 }
