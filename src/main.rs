@@ -1,10 +1,7 @@
 use clap::Parser;
-use cli::{Commands, SupertreeCli};
 use color_eyre::eyre::Result;
+use supertree::{cli::{Commands, SupertreeCli}, tasks, worktree};
 
-mod cli;
-mod tasks;
-mod worktree;
 
 fn main() -> Result<()> {
     color_eyre::install()?;

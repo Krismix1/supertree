@@ -3,7 +3,7 @@ use clap::{
 };
 
 #[derive(Debug)]
-struct CliArgs {
+pub struct CliArgs {
     pub remote_branch: Option<String>,
 }
 
@@ -67,7 +67,7 @@ pub struct NewWorktreeArgs {
     // https://docs.rs/clap/latest/clap/_derive/index.html#flattening-hand-implemented-args-into-a-derived-application
     // default_missing_value is only supported via the Arg struct
     #[command(flatten)]
-    more_args: CliArgs,
+    pub more_args: CliArgs,
 }
 
 impl NewWorktreeArgs {
