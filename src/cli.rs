@@ -2,7 +2,7 @@ use clap::{
     command, error::Error, Arg, ArgMatches, Args, Command, FromArgMatches, Parser, Subcommand,
 };
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct CliArgs {
     pub remote_branch: Option<String>,
 }
@@ -44,7 +44,7 @@ impl Args for CliArgs {
             Arg::new(REMOTE_BRANCH_NAME)
                 .short('r')
                 .long("remote")
-                .help("The remote branch to check out, if any. If supplied without a value (i.e. a flag), then it will default to branch_name")
+                .help("The remote branch to check out, if any. If supplied without a value (i.e. as a flag), then it will default to the BRANCH_NAME argument")
                 .num_args(0..=1)
                 .require_equals(true)
                 // https://docs.rs/clap/latest/clap/struct.Arg.html#method.default_missing_value
@@ -54,7 +54,7 @@ impl Args for CliArgs {
     }
 }
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, PartialEq, Eq)]
 #[command(author, version, about, long_about = None)]
 pub struct NewWorktreeArgs {
     /// the name of the branch to create
@@ -85,7 +85,7 @@ pub struct SupertreeCli {
     pub command: Commands,
 }
 
-#[derive(Debug, Subcommand)]
+#[derive(Debug, Subcommand, PartialEq, Eq)]
 pub enum Commands {
     /// Create new work tree. Creates default config if missing
     #[command(arg_required_else_help = true)]
@@ -93,4 +93,57 @@ pub enum Commands {
 
     /// Only generate default config (if missing) and exit
     Config,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_cli_args() -> Result<(), Box<dyn std::error::Error>> {
+        let args = SupertreeCli::try_parse_from(["supertree", "new", "feature"])?;
+        assert_eq!(
+            args.command,
+            Commands::New(NewWorktreeArgs {
+                branch_name: "feature".to_string(),
+                skip_tasks: false,
+                more_args: CliArgs {
+                    remote_branch: None,
+                },
+            })
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_cli_args_with_remote() -> Result<(), Box<dyn std::error::Error>> {
+        let args = SupertreeCli::try_parse_from(["supertree", "new", "-r=the_remote", "feature"])?;
+        assert_eq!(
+            args.command,
+            Commands::New(NewWorktreeArgs {
+                branch_name: "feature".to_string(),
+                skip_tasks: false,
+                more_args: CliArgs {
+                    remote_branch: Some("the_remote".to_string()),
+                },
+            })
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_cli_args_with_remote_as_flag() -> Result<(), Box<dyn std::error::Error>> {
+        let args = SupertreeCli::try_parse_from(["supertree", "new", "-r", "feature"])?;
+        assert_eq!(
+            args.command,
+            Commands::New(NewWorktreeArgs {
+                branch_name: "feature".to_string(),
+                skip_tasks: false,
+                more_args: CliArgs {
+                    remote_branch: Some("".to_string()),
+                },
+            })
+        );
+        Ok(())
+    }
 }

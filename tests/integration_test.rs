@@ -154,7 +154,6 @@ fn test_create_worktree_from_remote_branch() -> color_eyre::Result<()> {
         "feature content"
     );
 
-
     let branch = repo.find_branch("feature", BranchType::Local);
     assert!(branch.is_ok());
     assert!(branch.unwrap().upstream().is_ok());
