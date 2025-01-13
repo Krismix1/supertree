@@ -79,24 +79,31 @@ fn new_worktree(
         parent_dir.display()
     ))?;
 
-    let mut new_branch = repo
-        .branch(branch_name, &ref_branch.get().peel_to_commit()?, false)
-        .wrap_err("Failed to create new branch")?;
+    let target_branch = match repo.find_branch(branch_name, BranchType::Local) {
+        Ok(b) => b,
+        Err(err) => {
+            eprintln!("Failed to find branch: {:?}", err);
+            let mut target_branch = repo
+                .branch(branch_name, &ref_branch.get().peel_to_commit()?, false)
+                .wrap_err("Failed to create new branch")?;
 
-    if remote.is_some() {
-        new_branch
-            // passing None unsets the remote...
-            // but I want to keep it for existing branches
-            .set_upstream(
-                remote
-                    .map(|remote| format!("{}/{}", remote, branch_name))
-                    .as_deref(),
-            )
-            .context("Failed to set upstream for branch")?;
-    }
+            if remote.is_some() {
+                target_branch
+                    // passing None unsets the remote...
+                    // but I want to keep it for existing branches
+                    .set_upstream(
+                        remote
+                            .map(|remote| format!("{}/{}", remote, branch_name))
+                            .as_deref(),
+                    )
+                    .context("Failed to set upstream for branch")?;
+            }
+            target_branch
+        }
+    };
 
     let mut worktree_add_options = WorktreeAddOptions::new();
-    worktree_add_options.reference(Some(new_branch.get()));
+    worktree_add_options.reference(Some(target_branch.get()));
 
     // worktree name is used to create directory .git/worktrees/<name>
     let worktree_name = branch_name.replace(std::path::MAIN_SEPARATOR, "_");
