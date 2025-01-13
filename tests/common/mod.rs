@@ -1,5 +1,5 @@
 use git2::{Repository, RepositoryInitOptions, Signature, WorktreeAddOptions};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tempfile::TempDir;
 
 pub struct TestRepo {
@@ -74,5 +74,41 @@ impl TestRepo {
 
     pub fn create_gitignore(&self, content: &str) -> color_eyre::Result<()> {
         self.create_test_file(".gitignore", content)
+    }
+
+    pub fn clone_from(source: &Path) -> color_eyre::Result<Self> {
+        let temp_dir = tempfile::tempdir()?;
+        let bare_path = temp_dir.path().join("repo.git");
+        let master_path = temp_dir.path().join("master");
+
+        // Clone as bare repo
+        let mut opts = git2::RepositoryInitOptions::new();
+        opts.bare(true);
+
+        // First init bare repo
+        Repository::init_opts(&bare_path, &opts)?;
+
+        // Then clone into it
+        let repo = Repository::open(&bare_path)?;
+        let remote_callbacks = git2::RemoteCallbacks::new();
+        let mut fetch_options = git2::FetchOptions::new();
+        fetch_options.remote_callbacks(remote_callbacks);
+
+        // Create origin remote and fetch
+        repo.remote("origin", &format!("file://{}", source.to_str().unwrap()))?
+            .fetch(&["refs/*:refs/*"], Some(&mut fetch_options), None)?;
+
+        // Create master worktree
+        let mut opts = WorktreeAddOptions::new();
+        let binding = repo.find_reference("refs/heads/master")?;
+        opts.reference(Some(&binding));
+        let master_tree = repo.worktree("master", &master_path, Some(&opts))?;
+        Repository::open(master_tree.path())?;
+
+        Ok(Self {
+            _temp_dir: temp_dir,
+            bare_path,
+            master_path,
+        })
     }
 }
