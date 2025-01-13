@@ -154,5 +154,74 @@ fn test_create_worktree_from_remote_branch() -> color_eyre::Result<()> {
         "feature content"
     );
 
+
+    let branch = repo.find_branch("feature", BranchType::Local);
+    assert!(branch.is_ok());
+    assert!(branch.unwrap().upstream().is_ok());
+
+    Ok(())
+}
+
+#[test]
+fn test_create_worktree_from_remote_branch_with_conflicting_local() -> color_eyre::Result<()> {
+    // Create the "remote" repository
+    let remote_repo = TestRepo::new()?;
+    remote_repo.create_test_file("master.txt", "master content")?;
+
+    // Create and setup feature branch in remote
+    let repo = Repository::open(&remote_repo.master_path)?;
+    let head = repo.head()?.peel_to_commit()?;
+    repo.branch("feature", &head, false)?;
+    let feature_tree = repo.worktree(
+        "feature",
+        &remote_repo.bare_path.parent().unwrap().join("feature"),
+        None,
+    )?;
+    let feature_repo = Repository::open(feature_tree.path())?;
+
+    // Add file to feature branch
+    std::fs::write(feature_tree.path().join("feature.txt"), "feature content")?;
+    let mut index = feature_repo.index()?;
+    index.add_path(std::path::Path::new("feature.txt"))?;
+    index.write()?;
+    let tree_id = index.write_tree()?;
+    let tree = feature_repo.find_tree(tree_id)?;
+    let parent = feature_repo.head()?.peel_to_commit()?;
+    let signature = Signature::now("Test User", "test@example.com")?;
+    feature_repo.commit(
+        Some("HEAD"),
+        &signature,
+        &signature,
+        "Add feature file",
+        &tree,
+        &[&parent],
+    )?;
+
+    // Create second repo by cloning first repo
+    let local_repo = TestRepo::clone_from(&remote_repo.bare_path)?;
+
+    // Create new worktree from remote feature branch
+    let repo = Repository::open(&local_repo.master_path)?;
+
+    let args = NewWorktreeArgs {
+        branch_name: "feature".to_string(),
+        skip_tasks: true,
+        more_args: CliArgs {
+            remote_branch: Some("feature".to_string()),
+        },
+    };
+    let config = ProjectConfig::default();
+
+    worktree::create_worktree(&repo, &args, &config)?;
+
+    // Verify the worktree was created with content from feature branch
+    let new_worktree_path = local_repo.bare_path.parent().unwrap().join("feature");
+    assert!(new_worktree_path.exists());
+    assert!(new_worktree_path.join("feature.txt").exists());
+    assert_eq!(
+        std::fs::read_to_string(new_worktree_path.join("feature.txt"))?,
+        "feature content"
+    );
+
     Ok(())
 }
