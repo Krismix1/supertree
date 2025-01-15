@@ -4,7 +4,7 @@ default:
 
 # Build the project
 build:
-    cargo build
+    cargo build --release
 
 # Run tests with coverage and generate HTML report
 coverage:
