@@ -35,7 +35,7 @@ pub fn create_worktree(
         );
 
     let ref_branch = repo.find_branch(&ref_branch, branch_type).context(format!(
-        "{:?} ref branch {} not found",
+        "{:?} ref branch '{}' not found",
         branch_type, branch_name
     ))?;
 
@@ -92,11 +92,9 @@ fn new_worktree(
                     // passing None unsets the remote...
                     // but I want to keep it for existing branches
                     .set_upstream(
-                        remote
-                            .map(|remote| format!("{}/{}", remote, branch_name))
-                            .as_deref(),
+                        Some(ref_branch.name().unwrap().unwrap()),
                     )
-                    .context("Failed to set upstream for branch")?;
+                    .with_context(|| format!("Failed to set upstream for branch '{}' to '{}'", branch_name, ref_branch.name().unwrap().unwrap()))?;
             }
             target_branch
         }
@@ -148,6 +146,8 @@ fn prepare_worktree(repo: &Repository, target_dir: PathBuf, config: &ProjectConf
 }
 
 fn get_root_path(repo: &Repository) -> Result<PathBuf> {
+    // https://github.com/rust-lang/git2-rs/pull/1079/files
+    // Perhaps the new function can simplify this part
     if repo.is_worktree() {
         let workdir = repo.workdir().unwrap(); // /tmp/repo/feature/nested/
         let worktree_path = repo.path(); // /tmp/repo/.bare/worktrees/nested/
