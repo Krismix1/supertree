@@ -1,4 +1,4 @@
-use git2::{Repository, RepositoryInitOptions, Signature, WorktreeAddOptions};
+use git2::{Repository, Signature, WorktreeAddOptions};
 use std::path::{Path, PathBuf};
 use tempfile::TempDir;
 
@@ -23,7 +23,7 @@ impl TestRepo {
 
         // Create initial commit with empty tree
         let signature = Signature::now("Test User", "test@example.com")?;
-        let commit = repo.commit(
+        let _commit = repo.commit(
             Some("refs/heads/master"),
             &signature,
             &signature,
@@ -37,7 +37,7 @@ impl TestRepo {
         let binding = repo.find_reference("refs/heads/master")?;
         opts.reference(Some(&binding));
         let master_tree = repo.worktree("master", &master_path, Some(&opts))?;
-        let master_repo = Repository::open(master_tree.path())?;
+        let _master_repo = Repository::open(master_tree.path())?;
 
         Ok(Self {
             _temp_dir: temp_dir,

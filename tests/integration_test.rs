@@ -1,7 +1,5 @@
 use std::path::PathBuf;
 
-use assert_fs::prelude::*;
-
 use common::TestRepo;
 use git2::{build::CheckoutBuilder, BranchType, Repository, Signature};
 use supertree::{
