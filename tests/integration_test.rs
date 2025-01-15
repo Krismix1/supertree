@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use assert_fs::prelude::*;
 
 use common::TestRepo;
-use git2::{BranchType, Repository, Signature};
+use git2::{build::CheckoutBuilder, BranchType, Repository, Signature};
 use supertree::{
     cli::{CliArgs, NewWorktreeArgs},
     tasks::{files::CopyPathConfig, ProjectConfig, Task},
@@ -225,6 +225,65 @@ fn test_create_worktree_from_remote_branch_with_conflicting_local(
 }
 
 #[test]
+fn test_create_worktree_with_existing_local() -> Result<(), Box<dyn std::error::Error>> {
+    let test_repo = TestRepo::new()?;
+    test_repo.create_test_file("master.txt", "master content")?;
+
+    // Create and setup feature branch in remote
+    let repo = Repository::open(&test_repo.master_path)?;
+    let head = repo.head()?.peel_to_commit()?;
+    repo.branch("feature", &head, false)?;
+
+    checkout_branch(&repo, "feature")?;
+
+    // Add file to feature branch
+    std::fs::write(
+        repo.workdir().unwrap().join("feature.txt"),
+        "feature content",
+    )?;
+    let mut index = repo.index()?;
+    index.add_path(std::path::Path::new("feature.txt"))?;
+    index.write()?;
+    let tree_id = index.write_tree()?;
+    let tree = repo.find_tree(tree_id)?;
+    let parent = repo.head()?.peel_to_commit()?;
+    let signature = Signature::now("Test User", "test@example.com")?;
+    repo.commit(
+        Some("HEAD"),
+        &signature,
+        &signature,
+        "Add feature file",
+        &tree,
+        &[&parent],
+    )?;
+
+    // Checkout back to master
+    checkout_branch(&repo, "master")?;
+
+    let args = NewWorktreeArgs {
+        branch_name: "feature".to_string(),
+        skip_tasks: true,
+        more_args: CliArgs {
+            remote_branch: None,
+        },
+    };
+    let config = ProjectConfig::default();
+
+    worktree::create_worktree(&repo, &args, &config)?;
+
+    // Verify the worktree was created with content from feature branch
+    let new_worktree_path = test_repo.bare_path.parent().unwrap().join("feature");
+    assert!(new_worktree_path.exists());
+    assert!(new_worktree_path.join("feature.txt").exists());
+    assert_eq!(
+        std::fs::read_to_string(new_worktree_path.join("feature.txt"))?,
+        "feature content"
+    );
+
+    Ok(())
+}
+
+#[test]
 fn test_create_worktree_from_remote_branch_with_new_name() -> Result<(), Box<dyn std::error::Error>>
 {
     // Create the "remote" repository
@@ -290,6 +349,24 @@ fn test_create_worktree_from_remote_branch_with_new_name() -> Result<(), Box<dyn
     let branch = repo.find_branch("new-feature", BranchType::Local);
     assert!(branch.is_ok());
     assert!(branch.unwrap().upstream().is_ok());
+
+    Ok(())
+}
+
+fn checkout_branch(repo: &Repository, branch_name: &str) -> Result<(), git2::Error> {
+    // Get the branch
+    let branch = repo.find_branch(branch_name, BranchType::Local)?;
+    let branch_ref = branch.get();
+
+    // Set HEAD to point to the branch
+    repo.set_head(branch_ref.name().unwrap())?;
+
+    // Checkout the tree
+    repo.checkout_head(Some(
+        CheckoutBuilder::new()
+            .force() // To make it like git checkout -f
+            .remove_untracked(true), // Clean untracked files
+    ))?;
 
     Ok(())
 }
