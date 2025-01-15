@@ -41,6 +41,15 @@ That folder will contain autocompletion files for:
 - Zsh - the file `_supertree`
 - Fish - the file `supertree.fish`
 
+```bash
+# Create the custom completions directory if it doesn't exist
+mkdir -p "${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/supertree"
+# Copy the completion file
+# https://github.com/ohmyzsh/ohmyzsh/wiki/Customization#overriding-and-adding-plugins
+cp "$(find ./target/release -type f -name "_supertree" | sort | tail -n1)" "${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/supertree"
+# Add supertree to plugins if not already there
+plugins=(... supertree)
+```
 
 ## Features
 
