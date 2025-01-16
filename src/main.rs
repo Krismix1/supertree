@@ -2,7 +2,8 @@ use clap::Parser;
 use color_eyre::eyre::Result;
 use supertree::{
     cli::{Commands, SupertreeCli},
-    tasks, worktree,
+    tasks,
+    worktree::{self, get_root_path},
 };
 
 fn main() -> Result<()> {
@@ -11,9 +12,11 @@ fn main() -> Result<()> {
     let cli_config = SupertreeCli::parse();
     let projects_config = tasks::load_from_config_file()?;
 
-    let directory = std::env::current_dir()?;
-    let current_dir_name = directory.file_name().unwrap().to_str().unwrap();
+    let repo = worktree::get_repo_curr_dir()?;
+    let root_path = get_root_path(&repo)?;
+    let current_dir_name = root_path.file_name().unwrap().to_str().unwrap();
 
+    eprintln!("Detected project name to {}", current_dir_name);
     let project_config = projects_config
         .project_configs
         .get(current_dir_name)

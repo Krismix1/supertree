@@ -145,7 +145,7 @@ fn prepare_worktree(repo: &Repository, target_dir: PathBuf, config: &ProjectConf
     Ok(())
 }
 
-fn get_root_path(repo: &Repository) -> Result<PathBuf> {
+pub fn get_root_path(repo: &Repository) -> Result<PathBuf> {
     // https://github.com/rust-lang/git2-rs/pull/1079/files
     // Perhaps the new function can simplify this part
     if repo.is_worktree() {
